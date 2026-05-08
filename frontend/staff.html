@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Smart Hostel — Staff</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">🏠 smart_hostel</div>
+  <div class="nav-right">
+    <span class="nav-user" id="nav-name"></span>
+    <span class="badge ba" id="nav-spec" style="margin-right:4px"></span>
+    <button class="btn btn-g btn-sm" onclick="logout()">Logout</button>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="page-title">Staff Dashboard</div>
+  <div class="page-sub">View and update your assigned complaints</div>
+
+  <!-- STATS -->
+  <div class="g3">
+    <div class="stat"><div class="stat-n" id="s-total">—</div><div class="stat-l">Assigned</div></div>
+    <div class="stat"><div class="stat-n" id="s-open" style="color:var(--yellow)">—</div><div class="stat-l">Pending / Assigned</div></div>
+    <div class="stat"><div class="stat-n" id="s-done" style="color:var(--green)">—</div><div class="stat-l">Resolved</div></div>
+  </div>
+
+  <div style="margin-top:22px"></div>
+  <div id="msg" class="alert ae hidden"></div>
+
+  <!-- COMPLAINTS TABLE -->
+  <div class="card">
+    <div class="between">
+      <div class="card-title" style="margin-bottom:0">My Assignments</div>
+      <button class="btn btn-g btn-sm" onclick="loadAssignments()">↻ Refresh</button>
+    </div>
+
+    <div style="margin-top:14px">
+      <div id="loading" class="empty">Loading assignments…</div>
+      <div class="tw">
+        <table id="tbl" class="hidden">
+          <thead>
+            <tr>
+              <th>#</th><th>Category</th><th>Description</th>
+              <th>Priority</th><th>Status</th><th>Student ID</th><th>Assigned</th><th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <div id="empty" class="empty hidden">No complaints assigned to you.</div>
+    </div>
+  </div>
+
+  <!-- STATUS UPDATE MODAL (WITH TIMELINE) -->
+  <div id="modal" class="hidden" style="
+    position:fixed;inset:0;background:#000b;display:flex;
+    align-items:center;justify-content:center;z-index:200
+  ">
+    <div class="card" style="width:440px;max-width:95vw;margin:0">
+      <div class="card-title">Update Complaint #<span id="modal-id"></span></div>
+      <input type="hidden" id="modal-cid"/>
+
+      <div class="fg">
+        <label>New Status</label>
+        <select id="modal-status">
+          <option value="In Progress">In Progress</option>
+          <option value="Resolved">Resolved</option>
+        </select>
+      </div>
+
+      <div class="fg">
+        <label>Remarks / Resolution Notes</label>
+        <textarea id="modal-remarks" placeholder="Describe what was done…"></textarea>
+      </div>
+
+      <!-- 💡 ADDED: Timeline / history section -->
+      <div class="fg">
+        <label>📜 History Timeline</label>
+        <div id="modal-timeline" style="
+          max-height:200px; overflow-y:auto;
+          background:var(--s0); padding:8px 12px;
+          border-radius:8px; font-size:13px;
+          border:1px solid var(--border);
+        ">
+          <div class="empty">Loading history…</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <button class="btn btn-p" onclick="saveStatus()">Save</button>
+        <button class="btn btn-g" onclick="closeModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="api.js"></script>
+<script>
+  const { user } = Session.require('staff');
+  console.log("Logged staff user:", user);
+  console.log("Staff ID:", user.staff_id);
+  document.getElementById('nav-name').textContent = user.name;
+  document.getElementById('nav-spec').textContent  = user.specialization;
+
+  async function loadAssignments() {
+    document.getElementById('loading').classList.remove('hidden');
+    document.getElementById('tbl').classList.add('hidden');
+    document.getElementById('empty').classList.add('hidden');
+
+    try {
+      const rows = await GET(`/staff/${user.staff_id}/assignments`);
+
+      document.getElementById('s-total').textContent = rows.length;
+      document.getElementById('s-open').textContent  =
+        rows.filter(r => ['Assigned','Pending','In Progress'].includes(r.status)).length;
+      document.getElementById('s-done').textContent  =
+        rows.filter(r => r.status === 'Resolved').length;
+
+      document.getElementById('loading').classList.add('hidden');
+
+      if (!rows.length) {
+        document.getElementById('empty').classList.remove('hidden');
+        return;
+      }
+
+      document.getElementById('tbody').innerHTML = rows.map(r => `
+        <tr>
+          <td class="mono" style="color:var(--muted)">#${r.complaint_id}</td>
+          <td>${r.category_name}</td>
+          <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+              title="${r.description}">${r.description}</td>
+          <td>${pBadge(r.priority)}</td>
+          <td>${sBadge(r.status)}</td>
+          <td class="muted mono">S#${r.student_id}</td>
+          <td class="muted">${fmtDate(r.assigned_date)}</td>
+          <td>
+            ${r.status !== 'Resolved'
+              ? `<button class="btn btn-p btn-sm" onclick="openModal(${r.complaint_id})">Update</button>`
+              : `<span class="badge br">Done</span>`
+            }
+            <button class="btn btn-s btn-sm" onclick="viewComplaintPhotos(${r.complaint_id})">View Photos</button>
+          </td>
+        </tr>
+      `).join('');
+      document.getElementById('tbl').classList.remove('hidden');
+    } catch(e) {
+      document.getElementById('loading').classList.add('hidden');
+      alert_('msg', 'Could not load assignments: ' + e.message);
+    }
+  }
+
+  // FIXED: open modal with timeline
+  async function openModal(cid) {
+    document.getElementById('modal-cid').value = cid;
+    document.getElementById('modal-id').textContent = cid;
+    document.getElementById('modal-remarks').value = '';
+
+    const timelineDiv = document.getElementById('modal-timeline');
+    timelineDiv.innerHTML = '<div class="empty">Loading timeline…</div>';
+
+    try {
+      const complaint = await GET(`/complaints/${cid}`);
+      const timeline = complaint.timeline || [];
+
+      if (timeline.length) {
+        timelineDiv.innerHTML = timeline.map(event => `
+          <div style="margin-bottom:12px; border-bottom:1px solid var(--border); padding-bottom:8px;">
+            <div><strong>${event.updated_by?.name || event.updated_by?.role || 'System'}</strong> → ${event.status}</div>
+            <div class="muted" style="font-size:12px;">${event.remarks || '—'}</div>
+            <div class="muted" style="font-size:10px;">${fmtDate(event.timestamp)} ${fmtTime(event.timestamp)}</div>
+          </div>
+        `).join('');
+      } else {
+        timelineDiv.innerHTML = '<div class="empty">No history available for this complaint.</div>';
+      }
+    } catch (e) {
+      timelineDiv.innerHTML = `<div class="alert ae">⚠️ Could not load timeline: ${e.message}</div>`;
+      // still allow status update
+    }
+
+    // Show the modal (correct ID)
+    document.getElementById('modal').classList.remove('hidden');
+  }
+
+  function viewComplaintPhotos(complaint_id) {
+    window.location.href = `photos.html?id=${complaint_id}`;
+  }
+
+  function closeModal() {
+    document.getElementById('modal').classList.add('hidden');
+  }
+
+  async function saveStatus() {
+    const complaint_id = document.getElementById('modal-cid').value;
+    const status   = document.getElementById('modal-status').value;
+    const remarks  = document.getElementById('modal-remarks').value.trim();
+
+    try {
+      await PATCH(`/complaints/${complaint_id}/status`, {
+        status,
+        remarks,
+        updated_by: { role: 'staff', id: user.staff_id, name: user.name },
+      });
+      alert_('msg', `Complaint #${complaint_id} updated to "${status}"`, 's');
+      closeModal();
+      loadAssignments();
+    } catch(e) {
+      alert_('msg', e.message);
+    }
+  }
+
+  async function loadNotifs() {
+    try {
+      const list = await GET(`/notifications/${user.staff_id}`);
+      const el = document.getElementById('notifs-list');
+      if (!list.length) { el.innerHTML = '<div class="empty">No notifications</div>'; return; }
+      el.innerHTML = list.map(n => `
+        <div style="
+          padding:12px 14px;border-radius:6px;margin-bottom:8px;
+          background:${n.is_read ? 'var(--s2)' : 'var(--accent)10'};
+          border:1px solid ${n.is_read ? 'var(--border)' : 'var(--accent)33'}
+        ">
+          <div style="display:flex;justify-content:space-between;gap:8px">
+            <span>${n.message}</span>
+            ${!n.is_read ? `<span style="color:var(--accent);font-size:10px;flex-shrink:0">NEW</span>` : ''}
+          </div>
+          <div class="muted" style="margin-top:3px;font-family:var(--mono)">${fmtDate(n.created_at)} ${fmtTime(n.created_at)}</div>
+        </div>
+      `).join('');
+    } catch (e) {
+      alert_('msg', 'Could not load notifications');
+    }
+  }
+
+  loadAssignments();
+</script>
+</body>
+</html>

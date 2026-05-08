@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Smart Hostel — Student</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">🏠 smart_hostel</div>
+  <div class="nav-right">
+    <span class="nav-user" id="nav-name"></span>
+    <button class="btn btn-g btn-sm" onclick="logout()">Logout</button>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="page-title">Student Dashboard</div>
+  <div class="page-sub" id="page-sub">Welcome back</div>
+
+  <!-- STATS -->
+  <div class="g4" id="stats">
+    <div class="stat"><div class="stat-n" id="s-total">—</div><div class="stat-l">Complaints</div></div>
+    <div class="stat"><div class="stat-n" id="s-open" style="color:var(--yellow)">—</div><div class="stat-l">Open</div></div>
+    <div class="stat"><div class="stat-n" id="s-prog" style="color:var(--purple)">—</div><div class="stat-l">In Progress</div></div>
+    <div class="stat"><div class="stat-n" id="s-done" style="color:var(--green)">—</div><div class="stat-l">Resolved</div></div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs" style="margin-top:22px">
+    <button class="tab active" onclick="showTab('complaints',this)">Complaints</button>
+    <button class="tab"        onclick="showTab('laundry',this)">Laundry</button>
+    <button class="tab"        onclick="showTab('notifs',this)">Notifications</button>
+  </div>
+
+  <div id="msg" class="alert ae hidden"></div>
+
+  <!-- ═══ COMPLAINTS TAB ═══ -->
+  <div id="tab-complaints">
+
+    <!-- Submit form -->
+    <div class="card">
+      <div class="card-title">Submit New Complaint</div>
+      <div class="g2">
+        <div class="fg">
+          <label>Category</label>
+          <select id="c-cat"><option value="">Loading…</option></select>
+        </div>
+        <div class="fg">
+          <label>Priority</label>
+          <select id="c-pri">
+            <option value="Medium">Medium</option>
+            <option value="High">High</option>
+            <option value="Low">Low</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg">
+        <label>Description</label>
+        <textarea id="c-desc" placeholder="Describe the issue clearly…"></textarea>
+      </div>
+      <div class="fg">
+        <label>Attach Images</label>
+        <input id="c-images" type="file" accept="image/*" multiple />
+        <small class="muted">Upload up to 5 images</small>
+      </div>
+      <button id="submit-btn" data-label="Submit Complaint" class="btn btn-p" onclick="submitComplaint()">
+        Submit Complaint
+      </button>
+    </div>
+
+    <!-- Complaints list -->
+    <div class="card">
+      <div class="between">
+        <div class="card-title" style="margin-bottom:0">My Complaints</div>
+        <button class="btn btn-g btn-sm" onclick="loadComplaints()">↻ Refresh</button>
+      </div>
+      <div style="margin-top:14px">
+        <div id="complaints-loading" class="empty">Loading…</div>
+        <div class="tw"><table id="complaints-table" class="hidden">
+          <thead>
+            <tr>
+              <th>#</th><th>Category</th><th>Description</th>
+              <th>Priority</th><th>Status</th><th>Date</th><th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="complaints-body"></tbody>
+        8</table></div>
+        <div id="complaints-empty" class="empty hidden">No complaints submitted yet.</div>
+      </div>
+    </div>
+
+  </div><!-- /tab-complaints -->
+
+  <!-- ═══ LAUNDRY TAB ═══ -->
+  <div id="tab-laundry" class="hidden">
+
+    <!-- Book machine -->
+    <div class="card">
+      <div class="card-title">Book a Machine</div>
+      <div class="g3" id="machines-grid">
+        <div class="empty" style="grid-column:1/-1">Loading machines…</div>
+      </div>
+
+      <!-- booking form (shown after picking a machine) -->
+      <div id="book-form" class="hidden" style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px">
+        <p class="muted" style="margin-bottom:10px">Booking: <strong id="book-machine-label" style="color:var(--text)"></strong></p>
+        <div class="g2">
+          <div class="fg">
+            <label>Duration (minutes)</label>
+            <select id="b-dur">
+              <option value="5">1 min</option>
+              <option value="5">5 min</option>
+              <option value="30">30 min</option>
+              <option value="45" selected>45 min</option>
+              <option value="60">60 min</option>
+              <option value="90">90 min</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <button id="book-btn" data-label="Start Laundry" class="btn btn-s" onclick="startLaundry()">Start Laundry</button>
+          <button class="btn btn-g" onclick="cancelBook()">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Running sessions (no action column) -->
+    <div class="card">
+      <div class="between">
+        <div class="card-title" style="margin-bottom:0">Active Sessions</div>
+        <button class="btn btn-g btn-sm" onclick="loadRunning()">↻ Refresh</button>
+      </div>
+      <div style="margin-top:14px">
+        <div class="tw">
+          <table>
+            <thead>
+              <tr><th>Student</th><th>Machine</th><th>Started</th><th>Ends At</th></tr>
+            </thead>
+            <tbody id="running-body">
+              <tr><td colspan="4" class="empty">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /tab-laundry -->
+
+  <!-- ═══ NOTIFICATIONS TAB ═══ -->
+  <div id="tab-notifs" class="hidden">
+    <div class="card">
+      <div class="between">
+        <div class="card-title" style="margin-bottom:0">Notifications</div>
+        <button class="btn btn-g btn-sm" onclick="markAllRead()">Mark all read</button>
+      </div>
+      <div id="notifs-list" style="margin-top:14px">
+        <div class="empty">Loading…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ FEEDBACK MODAL ═══ -->
+  <div id="feedback-modal" class="hidden" style="
+    position:fixed; inset:0; background:#000a; display:flex;
+    align-items:center; justify-content:center; z-index:200;
+  ">
+    <div class="card" style="width:380px; max-width:95vw; margin:0">
+      <div class="card-title">Submit Feedback</div>
+      <input type="hidden" id="fb-complaint-id"/>
+      <div class="fg">
+        <label>Rating (1–5)</label>
+        <select id="fb-rating">
+          <option value="5">⭐⭐⭐⭐⭐ Excellent</option>
+          <option value="4">⭐⭐⭐⭐ Good</option>
+          <option value="3">⭐⭐⭐ Average</option>
+          <option value="2">⭐⭐ Poor</option>
+          <option value="1">⭐ Very Poor</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Comments</label>
+        <textarea id="fb-comments" placeholder="Optional comments…"></textarea>
+      </div>
+      <div class="row">
+        <button class="btn btn-p" onclick="submitFeedback()">Submit</button>
+        <button class="btn btn-g" onclick="closeFeedback()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script src="api.js"></script>
+<script>
+  const { user } = Session.require('student');
+  document.getElementById('nav-name').textContent = user.name || user.email;
+  document.getElementById('page-sub').textContent =
+    `Room ${user.room_number || '—'} · ${user.email}`;
+
+  let selectedMachine = null;
+
+  // ── TABS ──────────────────────────────────────────────
+  function showTab(name, btn) {
+    ['complaints','laundry','notifs'].forEach(t => {
+      document.getElementById('tab-'+t).classList.toggle('hidden', t !== name);
+    });
+    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    if (name === 'laundry')    { loadMachines(); loadRunning(); }
+    if (name === 'notifs')     loadNotifs();
+    if (name === 'complaints') loadComplaints();
+  }
+
+  // ── LOAD CATEGORIES ──────────────────────────────────
+  async function loadCategories() {
+    try {
+      const cats = await GET('/complaints/categories');
+      const sel = document.getElementById('c-cat');
+      sel.innerHTML = cats.map(c =>
+        `<option value="${c.category_id}">${c.category_name}</option>`
+      ).join('');
+    } catch(e) { /* ignore */ }
+  }
+
+  // ── COMPLAINTS ────────────────────────────────────────
+  async function loadComplaints() {
+    document.getElementById('complaints-loading').classList.remove('hidden');
+    document.getElementById('complaints-table').classList.add('hidden');
+    document.getElementById('complaints-empty').classList.add('hidden');
+
+    try {
+      const rows = await GET(`/complaints/student/${user.student_id}`);
+
+      // update stats
+      document.getElementById('s-total').textContent = rows.length;
+      document.getElementById('s-open').textContent  = rows.filter(r => r.status === 'Pending').length;
+      document.getElementById('s-prog').textContent  = rows.filter(r => ['Assigned','In Progress'].includes(r.status)).length;
+      document.getElementById('s-done').textContent  = rows.filter(r => r.status === 'Resolved').length;
+
+      document.getElementById('complaints-loading').classList.add('hidden');
+
+      if (!rows.length) {
+        document.getElementById('complaints-empty').classList.remove('hidden');
+        return;
+      }
+
+      const tbody = document.getElementById('complaints-body');
+      tbody.innerHTML = rows.map(c => `
+        <tr>
+          <td class="mono">#${c.complaint_id}</td>
+          <td>${c.category_name}</td>
+          <td style="max-width:250px; word-break:break-word;">${c.description}</td>
+          <td>${pBadge(c.priority)}</td>
+          <td>${sBadge(c.status)}</td>
+          <td class="muted">${fmtDate(c.date_submitted)}</td>
+          <td>
+            ${c.status === 'Resolved' 
+              ? `<button class="btn btn-s btn-sm" onclick="openFeedback(${c.complaint_id})">Feedback</button>` 
+              : ''}
+            <button class="btn btn-s btn-sm" onclick="viewComplaintPhotos(${c.complaint_id})">Photos</button>
+          </td>
+        </tr>
+      `).join('');
+      document.getElementById('complaints-table').classList.remove('hidden');
+    } catch(e) {
+      document.getElementById('complaints-loading').classList.add('hidden');
+      alert_('msg', 'Could not load complaints: ' + e.message);
+    }
+  }
+
+  // View complaint photos helper
+  function viewComplaintPhotos(complaint_id) {
+    window.location.href = `photos.html?id=${complaint_id}`;
+  }
+
+  function openFeedback(complaint_id) {
+    document.getElementById('fb-complaint-id').value = complaint_id;
+    document.getElementById('feedback-modal').classList.remove('hidden');
+  }
+
+  function closeFeedback() {
+    document.getElementById('feedback-modal').classList.add('hidden');
+  }
+
+  async function submitFeedback() {
+    const complaint_id = document.getElementById('fb-complaint-id').value;
+    const rating    = document.getElementById('fb-rating').value;
+    const comments  = document.getElementById('fb-comments').value;
+    try {
+      await POST('/complaints/feedback', { complaint_id, student_id: user.student_id, rating, comments });
+      alert_('msg', 'Feedback submitted. Thank you!', 's');
+      closeFeedback();
+      document.getElementById('fb-comments').value = '';
+    } catch(e) { alert_('msg', e.message); }
+  }
+
+  async function submitComplaint() {
+    const category_id = document.getElementById('c-cat').value;
+    const description = document.getElementById('c-desc').value.trim();
+    const priority = document.getElementById('c-pri').value;
+    const images = document.getElementById('c-images').files;
+
+    if (!category_id || !description) {
+      return alert_('msg', 'Please fill all fields');
+    }
+
+    const formData = new FormData();
+    formData.append('student_id', user.student_id);
+    formData.append('category_id', category_id);
+    formData.append('description', description);
+    formData.append('priority', priority);
+    for (let i = 0; i < images.length; i++) {
+      formData.append('images', images[i]);
+    }
+
+    setLoading('submit-btn', true);
+    try {
+      const res = await fetch(`${BASE}/complaints`, { method: 'POST', body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not submit complaint');
+      alert_('msg', 'Complaint submitted successfully!', 's');
+      document.getElementById('c-desc').value = '';
+      document.getElementById('c-images').value = '';
+      loadComplaints();
+    } catch(e) {
+      alert_('msg', e.message);
+    }
+    setLoading('submit-btn', false);
+  }
+
+  // ── LAUNDRY ───────────────────────────────────────────
+  async function loadMachines() {
+    try {
+      const machines = await GET('/laundry/machines');
+      const grid = document.getElementById('machines-grid');
+      if (!machines.length) { grid.innerHTML = '<div class="empty" style="grid-column:1/-1">No machines found</div>'; return; }
+
+      grid.innerHTML = machines.map(m => {
+        const cls = m.status === 'Available' ? 'av' : m.status === 'In Use' ? 'iu' : 'mt';
+        return `
+          <div class="mc ${cls}">
+            <div class="mc-name">${m.type} #${m.machine_id}</div>
+            <div class="mc-loc">📍 ${m.location}</div>
+            <div>${mBadge(m.status)}</div>
+            ${m.status === 'Available'
+              ? `<button class="btn btn-s btn-sm mt8" onclick="pickMachine(${m.machine_id},'${m.type} #${m.machine_id}')">Book</button>`
+              : `<button class="btn btn-g btn-sm mt8" disabled>Unavailable</button>`
+            }
+          </div>
+        `;
+      }).join('');
+    } catch(e) { alert_('msg', 'Could not load machines'); }
+  }
+
+  function pickMachine(id, label) {
+    selectedMachine = id;
+    document.getElementById('book-machine-label').textContent = label;
+    document.getElementById('book-form').classList.remove('hidden');
+    document.getElementById('book-form').scrollIntoView({ behavior:'smooth' });
+  }
+
+  function cancelBook() {
+    selectedMachine = null;
+    document.getElementById('book-form').classList.add('hidden');
+  }
+
+  async function startLaundry() {
+    if (!selectedMachine) return;
+    const duration = document.getElementById('b-dur').value;
+    setLoading('book-btn', true);
+    try {
+      await POST('/laundry/start', { machine_id: selectedMachine, student_id: user.student_id, duration });
+      alert_('msg', 'Laundry started! Check active sessions below.', 's');
+      cancelBook();
+      loadMachines();
+      loadRunning();
+    } catch(e) { alert_('msg', e.message); }
+    setLoading('book-btn', false);
+  }
+
+  async function loadRunning() {
+    try {
+      const rows = await GET('/laundry/running');
+      const tbody = document.getElementById('running-body');
+      if (!rows.length) {
+        tbody.innerHTML = `<tr><td colspan="4" class="empty" style="padding:20px">No active sessions</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = rows.map(r => `
+        <tr>
+          <td>${r.name}</td>
+          <td class="mono">Machine #${r.machine_id}</td>
+          <td class="muted">${fmtTime(r.start_time)}</td>
+          <td class="muted">${fmtTime(r.end_time)}</td>
+        </tr>
+      `).join('');
+    } catch (e) { /* silent */ }
+  }
+
+  // ── NOTIFICATIONS ────────────────────────────────────
+  async function loadNotifs() {
+    try {
+      const list = await GET(`/notifications/${user.student_id}`);
+      const el = document.getElementById('notifs-list');
+      if (!list.length) { el.innerHTML = '<div class="empty">No notifications</div>'; return; }
+      el.innerHTML = list.map(n => `
+        <div style="
+          padding:12px 14px; border-radius:6px; margin-bottom:8px;
+          background:${n.is_read ? 'var(--s2)' : 'var(--accent)10'};
+          border:1px solid ${n.is_read ? 'var(--border)' : 'var(--accent)33'}
+        ">
+          <div style="display:flex; justify-content:space-between; gap:8px">
+            <span>${n.message}</span>
+            ${!n.is_read ? `<span style="color:var(--accent); font-size:10px; flex-shrink:0">NEW</span>` : ''}
+          </div>
+          <div class="muted" style="margin-top:3px; font-family:var(--mono)">${fmtDate(n.created_at)} ${fmtTime(n.created_at)}</div>
+        </div>
+      `).join('');
+    } catch(e) { /* silent */ }
+  }
+
+  async function markAllRead() {
+    try {
+      await PATCH(`/notifications/user/${user.student_id}/read-all`, {});
+      loadNotifs();
+    } catch(e) { /* silent */ }
+  }
+
+  // ── INIT ────────────────────────────────────────────
+  loadCategories();
+  loadComplaints();
+</script>
+</body>
+</html>

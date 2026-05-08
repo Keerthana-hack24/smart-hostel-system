@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Smart Hostel — Login</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<div class="login-page">
+  <div class="login-box">
+
+    <div class="login-brand">🏠 smart_hostel</div>
+    <div class="login-sub">Hostel management system</div>
+
+    <!-- role tabs -->
+    <div class="role-pick">
+      <div class="role-btn active" data-r="student"  onclick="pickRole(this)">Student</div>
+      <div class="role-btn"        data-r="staff"    onclick="pickRole(this)">Staff</div>
+      <div class="role-btn"        data-r="admin"    onclick="pickRole(this)">Admin</div>
+    </div>
+
+    <div id="msg" class="alert ae hidden"></div>
+
+    <div class="fg">
+      <label>Email</label>
+      <input id="email" type="email" placeholder="you@hostel.com"/>
+    </div>
+    <div class="fg">
+      <label>Password</label>
+      <input id="pass" type="password" placeholder="••••••••"
+             onkeydown="if(event.key==='Enter') doLogin()"/>
+    </div>
+
+    <button id="login-btn" data-label="Login →" class="btn btn-p btn-full mt8" onclick="doLogin()">
+      Login →
+    </button>
+
+    <!-- register toggle — student only -->
+    <div id="reg-link" class="divider" style="margin-top:18px">
+      <p class="muted" style="text-align:center">
+        No account?
+        <a href="#" onclick="toggleReg()" style="color:var(--accent);text-decoration:none">Register</a>
+      </p>
+    </div>
+
+    <!-- register form -->
+    <div id="reg-panel" class="hidden" style="margin-top:4px">
+      <div class="card-title" style="margin-bottom:12px">New Student Account</div>
+      <div class="fg"><label>Full Name</label><input id="rn" placeholder="Akshara"/></div>
+      <div class="fg"><label>Email</label><input id="re" type="email" placeholder="ak@hostel.com"/></div>
+      <div class="fg"><label>Phone</label><input id="rp" placeholder="9876543210"/></div>
+      <div class="fg"><label>Password</label><input id="rw" type="password" placeholder="••••••••"/></div>
+      <button class="btn btn-s btn-full" onclick="doRegister()">Create Account</button>
+    </div>
+
+  </div>
+</div>
+
+<script src="api.js"></script>
+<script>
+  let role = 'student';
+
+  function pickRole(el) {
+    role = el.dataset.r;
+    document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    // show register only for students
+    document.getElementById('reg-link').style.display  = role === 'student' ? '' : 'none';
+    document.getElementById('reg-panel').classList.add('hidden');
+  }
+
+  function toggleReg() {
+    document.getElementById('reg-panel').classList.toggle('hidden');
+  }
+
+  async function doLogin() {
+    const email = document.getElementById('email').value.trim();
+    const pass  = document.getElementById('pass').value;
+    if (!email || !pass) return alert_('msg', 'Enter email and password');
+
+    setLoading('login-btn', true);
+    try {
+      if (role === 'student') {
+        const user = await POST('/students/login', { email, password: pass });
+        Session.save('student', user);
+        window.location.href = 'student.html';
+
+      } else if (role === 'staff') {
+          const user = await POST('/staff/login', { email, password: pass });
+
+          Session.save('staff', user);
+          window.location.href = 'staff.html';
+      } else {
+        // Admin — checked against seed data credentials
+        if (email === 'admin@hostel.com' && pass === 'admin123') {
+          Session.save('admin', { name: 'Hostel Warden', email });
+          window.location.href = 'admin.html';
+        } else {
+          throw new Error('Invalid admin credentials');
+        }
+      }
+    } catch (e) {
+      alert_('msg', e.message);
+    }
+    setLoading('login-btn', false);
+  }
+
+  async function doRegister() {
+    const name = document.getElementById('rn').value.trim();
+    const email= document.getElementById('re').value.trim();
+    const phone= document.getElementById('rp').value.trim();
+    const pass = document.getElementById('rw').value;
+    if (!name || !email || !pass) return alert_('msg', 'Name, email & password required');
+
+    try {
+      await POST('/students/register', { name, email, phone, password: pass });
+      alert_('msg', 'Account created! Please login.', 's');
+      document.getElementById('reg-panel').classList.add('hidden');
+    } catch (e) {
+      alert_('msg', e.message);
+    }
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Smart Hostel — Admin</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">🏠 smart_hostel</div>
+  <div class="nav-right">
+    <span class="nav-user" id="nav-name"></span>
+    <span class="badge br" style="font-size:10px">ADMIN</span>
+    <button class="btn btn-g btn-sm" onclick="logout()">Logout</button>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="page-title">Admin Panel</div>
+  <div class="page-sub">Manage all complaints, staff assignments and laundry</div>
+
+  <!-- STATS -->
+  <div class="g4" id="stats">
+    <div class="stat"><div class="stat-n" id="s-total">—</div><div class="stat-l">Total Complaints</div></div>
+    <div class="stat"><div class="stat-n" id="s-pend" style="color:var(--yellow)">—</div><div class="stat-l">Pending</div></div>
+    <div class="stat"><div class="stat-n" id="s-prog" style="color:var(--purple)">—</div><div class="stat-l">In Progress</div></div>
+    <div class="stat"><div class="stat-n" id="s-done" style="color:var(--green)">—</div><div class="stat-l">Resolved</div></div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs" style="margin-top:22px">
+    <button class="tab active" onclick="showTab('complaints',this)">All Complaints</button>
+    <button class="tab"        onclick="showTab('staff',this)">Staff</button>
+    <button class="tab"        onclick="showTab('laundry',this)">Laundry</button>
+  </div>
+
+  <div id="msg" class="alert ae hidden"></div>
+
+  <!-- ═══ COMPLAINTS TAB ═══ -->
+  <div id="tab-complaints">
+
+    <!-- Filters -->
+    <div class="card" style="padding:14px 16px">
+      <div class="row" style="flex-wrap:wrap;gap:10px">
+        <select id="f-status" onchange="loadComplaints()" style="width:160px">
+          <option value="">All Statuses</option>
+          <option value="Pending">Pending</option>
+          <option value="Assigned">Assigned</option>
+          <option value="In Progress">In Progress</option>
+          <option value="Resolved">Resolved</option>
+        </select>
+        <select id="f-priority" onchange="loadComplaints()" style="width:150px">
+          <option value="">All Priorities</option>
+          <option value="High">High</option>
+          <option value="Medium">Medium</option>
+          <option value="Low">Low</option>
+        </select>
+        <button class="btn btn-g btn-sm" onclick="resetFilters()">Clear</button>
+        <button class="btn btn-g btn-sm" onclick="loadComplaints()">↻ Refresh</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div id="c-loading" class="empty">Loading…</div>
+      <div class="tw">
+        <table id="c-tbl" class="hidden">
+          <thead>
+            <tr>
+              <th>#</th><th>Student</th><th>Category</th><th>Description</th>
+              <th>Priority</th><th>Status</th><th>Date</th><th>Assign</th>
+            </tr>
+          </thead>
+          <tbody id="c-body"></tbody>
+        </table>
+      </div>
+      <div id="c-empty" class="empty hidden">No complaints found.</div>
+    </div>
+
+  </div><!-- /tab-complaints -->
+
+  <!-- ═══ STAFF TAB ═══ -->
+  <div id="tab-staff" class="hidden">
+    <div class="card">
+      <div class="card-title">Staff Members</div>
+      <div id="s-loading" class="empty">Loading…</div>
+      <div class="tw">
+        <table id="s-tbl" class="hidden">
+          <thead>
+            <tr><th>#</th><th>Name</th><th>Email</th><th>Phone</th><th>Specialization</th><th>Status</th></tr>
+          </thead>
+          <tbody id="s-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ LAUNDRY TAB ═══ -->
+  <div id="tab-laundry" class="hidden">
+    <div class="g2">
+      <!-- all machines -->
+      <div class="card">
+        <div class="card-title">All Machines</div>
+        <div id="m-loading" class="empty">Loading…</div>
+        <div id="m-grid"></div>
+      </div>
+      <!-- running sessions -->
+      <div class="card">
+        <div class="between">
+          <div class="card-title" style="margin-bottom:0">Active Sessions</div>
+          <button class="btn btn-g btn-sm" onclick="loadRunning()">↻</button>
+        </div>
+        <div style="margin-top:12px">
+          <div class="tw"><table>
+            <thead><tr><th>Student</th><th>Machine</th><th>Started</th><th>Ends</th></tr></thead>
+            <tbody id="r-body"><tr><td colspan="4" class="empty">Loading…</td></tr></tbody>
+          </table></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ ASSIGN MODAL ═══ -->
+  <div id="assign-modal" class="hidden" style="
+    position:fixed;inset:0;background:#000b;display:flex;
+    align-items:center;justify-content:center;z-index:200
+  ">
+    <div class="card" style="width:420px;max-width:95vw;margin:0">
+      <div class="card-title">Assign Complaint #<span id="a-cid-label"></span></div>
+      <input type="hidden" id="a-cid"/>
+
+      <div class="fg">
+        <label>Select Staff</label>
+        <select id="a-staff"></select>
+      </div>
+
+      <div id="a-msg" class="alert ae hidden"></div>
+
+      <div class="row">
+        <button class="btn btn-p" onclick="doAssign()">Assign</button>
+        <button class="btn btn-g" onclick="closeAssign()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="api.js"></script>
+<script>
+  const { user } = Session.require('admin');
+  document.getElementById('nav-name').textContent = user.name;
+
+  let staffList = [];
+
+  // ── TABS ──────────────────────────────────────────────
+  function showTab(name, btn) {
+    ['complaints','staff','laundry'].forEach(t => {
+      document.getElementById('tab-'+t).classList.toggle('hidden', t !== name);
+    });
+    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    if (name === 'complaints') loadComplaints();
+    if (name === 'staff')      loadStaff();
+    if (name === 'laundry')    { loadMachines(); loadRunning(); }
+  }
+
+  // ── COMPLAINTS ────────────────────────────────────────
+  async function loadComplaints() {
+    document.getElementById('c-loading').classList.remove('hidden');
+    document.getElementById('c-tbl').classList.add('hidden');
+    document.getElementById('c-empty').classList.add('hidden');
+
+    try {
+      let rows = await GET('/complaints');
+
+      const sf = document.getElementById('f-status').value;
+      const pf = document.getElementById('f-priority').value;
+      if (sf) rows = rows.filter(r => r.status === sf);
+      if (pf) rows = rows.filter(r => r.priority === pf);
+
+      document.getElementById('s-total').textContent = rows.length;
+      document.getElementById('s-pend').textContent  = rows.filter(r => r.status === 'Pending').length;
+      document.getElementById('s-prog').textContent  =
+        rows.filter(r => ['Assigned','In Progress'].includes(r.status)).length;
+      document.getElementById('s-done').textContent  = rows.filter(r => r.status === 'Resolved').length;
+
+      document.getElementById('c-loading').classList.add('hidden');
+      if (!rows.length) { document.getElementById('c-empty').classList.remove('hidden'); return; }
+
+      document.getElementById('c-body').innerHTML = rows.map(r => `
+        <tr>
+          <td class="mono" style="color:var(--muted)">#${r.complaint_id}</td>
+          <td>${r.student_name}<br><span class="muted">ID ${r.student_id}</span></td>
+          <td>${r.category_name}</td>
+          <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+              title="${r.description}">${r.description}</td>
+          <td>${pBadge(r.priority)}</td>
+          <td>${sBadge(r.status)}</td>
+          <td class="muted">${fmtDate(r.date_submitted)}</td>
+          <td>
+            ${r.status === 'Pending'
+              ? `<button class="btn btn-p btn-sm" onclick="openAssign(${r.complaint_id})">Assign</button>`
+              : `<span class="muted">—</span>`
+            }
+          </td>
+        </tr>
+      `).join('');
+      document.getElementById('c-tbl').classList.remove('hidden');
+    } catch(e) {
+      document.getElementById('c-loading').classList.add('hidden');
+      alert_('msg', 'Could not load complaints: ' + e.message);
+    }
+  }
+
+  function resetFilters() {
+    document.getElementById('f-status').value = '';
+    document.getElementById('f-priority').value = '';
+    loadComplaints();
+  }
+
+  // ── STAFF ─────────────────────────────────────────────
+  async function loadStaff() {
+    try {
+      staffList = await GET('/staff');
+      document.getElementById('s-loading').classList.add('hidden');
+
+      if (!staffList.length) return;
+
+      document.getElementById('s-body').innerHTML = staffList.map(s => `
+        <tr>
+          <td class="mono" style="color:var(--muted)">#${s.staff_id}</td>
+          <td>${s.name}</td>
+          <td class="muted">${s.email}</td>
+          <td class="muted">${s.phone || '—'}</td>
+          <td><span class="badge ba">${s.specialization}</span></td>
+          <td>${s.is_active ? '<span class="badge bav">Active</span>' : '<span class="badge bmt">Inactive</span>'}</td>
+        </tr>
+      `).join('');
+      document.getElementById('s-tbl').classList.remove('hidden');
+    } catch(e) { alert_('msg', 'Could not load staff'); }
+  }
+
+  // ── ASSIGN MODAL ─────────────────────────────────────
+  async function openAssign(cid) {
+    document.getElementById('a-cid').value = cid;
+    document.getElementById('a-cid-label').textContent = cid;
+    document.getElementById('a-msg').classList.add('hidden');
+
+    // populate staff dropdown
+    if (!staffList.length) staffList = await GET('/staff');
+    document.getElementById('a-staff').innerHTML = staffList.map(s =>
+      `<option value="${s.staff_id}">${s.name} — ${s.specialization}</option>`
+    ).join('');
+
+    document.getElementById('assign-modal').classList.remove('hidden');
+  }
+
+  function closeAssign() {
+    document.getElementById('assign-modal').classList.add('hidden');
+  }
+
+  async function doAssign() {
+    const complaint_id = document.getElementById('a-cid').value;
+    const staff_id     = document.getElementById('a-staff').value;
+    try {
+      await POST('/complaints/assign', { complaint_id, staff_id });
+      alert_('msg', `Complaint #${complaint_id} assigned successfully!`, 's');
+      closeAssign();
+      loadComplaints();
+    } catch(e) {
+      document.getElementById('a-msg').className = 'alert ae';
+      document.getElementById('a-msg').textContent = e.message;
+      document.getElementById('a-msg').classList.remove('hidden');
+    }
+  }
+
+  // ── LAUNDRY ───────────────────────────────────────────
+  async function loadMachines() {
+    try {
+      const machines = await GET('/laundry/machines');
+      document.getElementById('m-loading').classList.add('hidden');
+      document.getElementById('m-grid').innerHTML = machines.map(m => {
+        const cls = m.status === 'Available' ? 'av' : m.status === 'In Use' ? 'iu' : 'mt';
+        return `
+          <div class="mc ${cls}" style="margin-bottom:8px">
+            <div class="mc-name">${m.type} #${m.machine_id}</div>
+            <div class="mc-loc">📍 ${m.location}</div>
+            <div>${mBadge(m.status)}</div>
+          </div>
+        `;
+      }).join('');
+    } catch(e) { /* silent */ }
+  }
+
+  async function loadRunning() {
+    try {
+      const rows = await GET('/laundry/running');
+      const tbody = document.getElementById('r-body');
+      if (!rows.length) {
+        tbody.innerHTML = `<tr><td colspan="4" class="empty" style="padding:20px">No active sessions</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = rows.map(r => `
+        <tr>
+          <td>${r.name}</td>
+          <td class="mono">Machine #${r.machine_id}</td>
+          <td class="muted">${fmtTime(r.start_time)}</td>
+          <td class="muted">${fmtTime(r.end_time)}</td>
+        </tr>
+      `).join('');
+    } catch(e) { /* silent */ }
+  }
+
+  // ── INIT ─────────────────────────────────────────────
+  loadComplaints();
+</script>
+</body>
+</html>

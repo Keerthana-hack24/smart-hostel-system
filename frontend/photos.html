@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Complaint Photos</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">🏠 smart_hostel</div>
+  <div class="nav-right">
+    <span class="nav-user" id="nav-name"></span>
+    <button class="btn btn-g btn-sm" onclick="logout()">Logout</button>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="page-title">Complaint Photos</div>
+  <div id="photo-gallery"></div>
+</div>
+
+<script src="api.js"></script>
+<script>
+  // Extract complaint_id from URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const complaint_id = urlParams.get('id');
+
+  async function loadComplaintPhotos() {
+    const gallery = document.getElementById('photo-gallery');
+    try {
+        const complaint = await GET(`/complaints/${complaint_id}`);
+        if (!complaint.attachments || complaint.attachments.length === 0) {
+        gallery.innerHTML = '<div class="empty">No photos attached to this complaint.</div>';
+        return;
+        }
+        const photosHTML = complaint.attachments.map(att => `
+        <div class="photo">
+            <img src="${att.thumbnail_url || att.url}" alt="Attachment" style="max-width:100%; border-radius:8px;" />
+            <a href="${att.url}" target="_blank" class="btn btn-s btn-sm" style="margin-top:8px; display:inline-block;">View Full Image</a>
+        </div>
+        `).join('');
+        gallery.innerHTML = photosHTML;
+    } catch (e) {
+        gallery.innerHTML = `<div class="alert ae">Could not load photos: ${e.message}</div>`;
+    }
+    }
+
+  loadComplaintPhotos();
+</script>
+
+</body>
+</html>
