@@ -115,15 +115,6 @@ npm start      # production
 
 Server starts at `http://localhost:5000`. Open `frontend/index.html` in your browser.
 
-## Default Credentials
-
-| Role | Email | Password |
-|---|---|---|
-| Admin | admin@hostel.com | admin123 |
-| Student | ak@gmail.com | pass123 |
-| Staff (Electrical) | electrician@hostel.com | staff123 |
-| Staff (Plumbing) | plumber@hostel.com | staff123 |
-
 ## API Overview
 
 | Method | Endpoint | Description |
