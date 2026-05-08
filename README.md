@@ -36,24 +36,26 @@ MySQL handles all transactional data with **stored procedures** (`StartLaundry`,
 
 ## Project Structure
 
-├── main.js                  # Express entry point
-├── db/
-│   ├── mysql.js
-│   └── mongo.js
-├── routes/
-│   ├── students.js
-│   ├── staff.js
-│   ├── complaints.js
-│   ├── laundry.js
-│   └── notifications.js
-├── models/                  # Mongoose schemas
-│   ├── ComplaintHistory.js
-│   ├── ComplaintAttachment.js
-│   ├── Notification.js
-│   ├── LaundryLog.js
-│   └── LaundryNotification.js
-├── middleware/
-│   └── upload.js
+```
+├── backend/
+│   ├── main.js              # Express entry point
+│   ├── db/
+│   │   ├── mysql.js
+│   │   └── mongo.js
+│   ├── routes/
+│   │   ├── students.js
+│   │   ├── staff.js
+│   │   ├── complaints.js
+│   │   ├── laundry.js
+│   │   └── notifications.js
+│   ├── models/
+│   │   ├── ComplaintHistory.js
+│   │   ├── ComplaintAttachment.js
+│   │   ├── Notification.js
+│   │   ├── LaundryLog.js
+│   │   └── LaundryNotification.js
+│   └── middleware/
+│       └── upload.js
 ├── frontend/
 │   ├── index.html           # Login
 │   ├── student.html
@@ -61,8 +63,10 @@ MySQL handles all transactional data with **stored procedures** (`StartLaundry`,
 │   ├── admin.html
 │   ├── style.css
 │   └── api.js
-├── schema.sql               # Tables, triggers, views, roles
-└── data.sql                 # Seed data
+└── sql/
+    ├── schema.sql           # Tables, triggers, views, roles
+    └── data.sql             # Seed data
+```
 
 ---
 
